@@ -79,7 +79,7 @@ class TransitionProject(object):
         content = tuple((e, state) for e in self._data['items'])
         try:
             self._container.add_states(content=content,
-                                       allow_reset=bool(
+                                       forced=bool(
                                            self._widgets['forced_add'].get()))
         except Exception as ex:
             self._on_failure(str(ex))
@@ -244,6 +244,20 @@ class TransitionProject(object):
         frame_in.pack(side=tkinter.LEFT, fill=tkinter.Y)
         frame_out.pack(side=tkinter.RIGHT, fill=tkinter.Y)
 
+    def _replay(self):
+        logs = tkinter.filedialog.askopenfilenames(
+            title='select the log files for operations to replay',
+            initialdir=BASE_DIR,
+            filetypes=[("Log files in JSON", "*.log.json")])
+        logs = sorted(list(logs))
+
+        path_new = tkinter.filedialog.askdirectory(
+            title='select/create directory for new project')
+        if not os.path.isdir(path_new):
+            os.makedirs(path_new)
+        state_container.StateContainer(os.path.join(path_new,
+                                                    FN_STATE)).replay(logs)
+
     def _init_gui(self):
         # gui preparation
         control = tkinter.Tk()
@@ -400,6 +414,12 @@ class TransitionProject(object):
                        height=HEIGHT_BUTTON,
                        width=WIDTH_BUTTON,
                        command=self._filter).pack(side=tkinter.TOP,
+                                                  fill=tkinter.X)
+        tkinter.Button(self._widgets['frame_others'],
+                       text='replay',
+                       height=HEIGHT_BUTTON,
+                       width=WIDTH_BUTTON,
+                       command=self._replay).pack(side=tkinter.TOP,
                                                   fill=tkinter.X)
 
         self._widgets['tab_container'].add(self._widgets['frame_add'],

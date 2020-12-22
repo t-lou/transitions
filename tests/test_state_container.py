@@ -2,8 +2,8 @@ import unittest
 import sys
 import shutil
 import os
+import sqlite3
 
-import utils
 sys.path.append(os.getcwd() + '/..')
 
 import state_container
@@ -11,12 +11,31 @@ import state_container
 FILE = './transitions.db'
 
 
+def check_db(path: str, content: list):
+    assert all(
+        len(elem) == 2 and type(elem[0]) == str and type(elem[1]) == str
+        for elem in content)
+    conn = sqlite3.connect(path)
+    is_okay = True
+    c = conn.cursor()
+    for elem in content:
+        result = tuple(
+            c.execute(f'SELECT state FROM states WHERE name=="{elem[0]}";'))
+        assert len(result) == 1, f'found non-unique match for name {elem[0]}'
+        is_okay = is_okay and result[0][0] == elem[1]
+    conn.commit()
+    conn.close()
+    return is_okay
+
+
 class TestTransitions(unittest.TestCase):
     def setUp(self):
-        utils.reset(FILE)
+        if os.path.isfile(FILE):
+            os.remove(FILE)
 
     def tearDown(self):
-        utils.reset(FILE)
+        if os.path.isfile(FILE):
+            os.remove(FILE)
         if os.path.isdir('logs'):
             shutil.rmtree('logs')
 
@@ -29,7 +48,7 @@ class TestTransitions(unittest.TestCase):
             ('issue2', 'done'),
         ))
         self.assertTrue(
-            utils.check_db(FILE, (
+            check_db(FILE, (
                 ('issue1', 'init'),
                 ('issue2', 'done'),
             )))
@@ -56,7 +75,7 @@ class TestTransitions(unittest.TestCase):
         except Exception:
             triggered = True
         self.assertTrue(triggered)
-        target.add_states((('issue1', 'done'), ), allow_reset=True)
+        target.add_states((('issue1', 'done'), ), forced=True)
         self.assertEqual(
             target.consult(['issue1', 'issue2', 'issue3', 'issue4', 'issue5']),
             ('done', 'done', None, 'init', 'done'))
