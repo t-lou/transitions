@@ -3,12 +3,12 @@ import sys
 import shutil
 import os
 
-sys.path.append(os.getcwd() + '/..')
+sys.path.append(os.path.dirname(os.getcwd()))
 
 import state_container
 
-DIR_ORIGINAL = './proj'
-DIR_REPLAY = './copy'
+DIR_ORIGINAL = 'proj'
+DIR_REPLAY = 'copy'
 
 
 def clean():

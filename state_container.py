@@ -23,8 +23,10 @@ class StateContainer(object):
 
     def log_action(self, action: dict):
         log_text = json.dumps(action, indent=' ')
-        path = os.path.join(self._log_dir,
-                            str(datetime.datetime.now()) + '.log.json')
+        path = os.path.join(
+            self._log_dir,
+            str(datetime.datetime.now()).replace(' ', 'T').replace(':', '-') +
+            '.log.json')
         with open(path, 'w') as fs:
             fs.write(log_text)
 

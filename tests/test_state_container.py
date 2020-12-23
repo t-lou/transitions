@@ -4,11 +4,11 @@ import shutil
 import os
 import sqlite3
 
-sys.path.append(os.getcwd() + '/..')
+sys.path.append(os.path.dirname(os.getcwd()))
 
 import state_container
 
-FILE = './transitions.db'
+FILE = 'transitions.db'
 
 
 def check_db(path: str, content: list):
