@@ -31,8 +31,8 @@ class TestReplay(unittest.TestCase):
         # create a dummy project
         container = state_container.StateContainer(
             os.path.join(DIR_ORIGINAL, 'states.db'))
-        container.add_states((('1', 'a'), ('2', 'a'), ('3', 'a')))
-        container.add_states((('4', 'b'), ('5', 'b'), ('3', 'b')), forced=True)
+        container.add_states({'1': 'a', '2': 'a', '3': 'a'})
+        container.add_states({'4': 'b', '5': 'b', '3': 'b'}, forced=True)
         container.transit(('3', '4'), from_state='b', to_state='c')
         container.transit(('1', '4'),
                           from_state='-',

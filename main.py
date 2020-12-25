@@ -9,15 +9,15 @@ import csv
 
 import state_container
 
-BASE_DIR = os.path.dirname(os.path.realpath(__file__))
-PROJ_DIR = os.path.join(BASE_DIR, 'projects')
-FN_STATE = 'states.db'
-HEIGHT_BUTTON = 5
-WIDTH_BUTTON = 60
+kBaseDir = os.path.dirname(os.path.realpath(__file__))
+kProjDir = os.path.join(kBaseDir, 'projects')
+kFilename = 'states.db'
+kHeightButton = 5
+kWidthButton = 60
 
 
 def get_db_path(name: str) -> str:
-    return os.path.join(PROJ_DIR, name, FN_STATE)
+    return os.path.join(kProjDir, name, kFilename)
 
 
 class TransitionProject(object):
@@ -76,7 +76,7 @@ class TransitionProject(object):
         if not bool(state):
             self._on_failure('state is empty')
             return
-        content = tuple((e, state) for e in self._data['items'])
+        content = {n: state for n in self._data['items']}
         try:
             self._container.add_states(content=content,
                                        forced=bool(
@@ -95,7 +95,8 @@ class TransitionProject(object):
             self._on_failure('state is empty')
             return
         self._data['items'], left = self._container.select_for_addition(
-            content=tuple((name, state) for name in self._data['full']))
+            content={name: state
+                     for name in self._data['full']})
         self._show_items(self._data['items'], left)
 
     def _cb_transit(self):
@@ -154,7 +155,7 @@ class TransitionProject(object):
     def _backup_db(self):
         filename = tkinter.filedialog.asksaveasfilename(
             initialdir=os.path.dirname(self._path_db),
-            initialfile=FN_STATE + '.backup')
+            initialfile=kFilename + '.backup')
         assert bool(filename), 'file not selected'
         shutil.copyfile(self._path_db, filename)
 
@@ -197,11 +198,11 @@ class TransitionProject(object):
         frame_out = tkinter.Frame(win_filter)
 
         text_filter_names = tkinter.Text(frame_in,
-                                         height=HEIGHT_BUTTON,
-                                         width=WIDTH_BUTTON)
+                                         height=kHeightButton,
+                                         width=kWidthButton)
         text_filter_states = tkinter.Text(frame_in,
-                                          height=HEIGHT_BUTTON,
-                                          width=WIDTH_BUTTON)
+                                          height=kHeightButton,
+                                          width=kWidthButton)
         text_filter_names.pack(side=tkinter.TOP, fill=tkinter.X)
         text_filter_states.pack(side=tkinter.TOP, fill=tkinter.X)
 
@@ -228,16 +229,16 @@ class TransitionProject(object):
 
         tkinter.Button(frame_in,
                        text='filter',
-                       height=HEIGHT_BUTTON,
-                       width=WIDTH_BUTTON,
+                       height=kHeightButton,
+                       width=kWidthButton,
                        command=filter).pack(side=tkinter.TOP, fill=tkinter.X)
         tkinter.Button(frame_in,
                        text='export',
-                       height=HEIGHT_BUTTON,
-                       width=WIDTH_BUTTON,
+                       height=kHeightButton,
+                       width=kWidthButton,
                        command=export).pack(side=tkinter.TOP, fill=tkinter.X)
-        text_display_names = tkinter.Text(frame_out, width=WIDTH_BUTTON)
-        text_display_states = tkinter.Text(frame_out, width=WIDTH_BUTTON)
+        text_display_names = tkinter.Text(frame_out, width=kWidthButton)
+        text_display_states = tkinter.Text(frame_out, width=kWidthButton)
         text_display_names.pack(side=tkinter.LEFT, fill=tkinter.Y)
         text_display_states.pack(side=tkinter.LEFT, fill=tkinter.Y)
 
@@ -247,7 +248,7 @@ class TransitionProject(object):
     def _replay(self):
         logs = tkinter.filedialog.askopenfilenames(
             title='select the log files for operations to replay',
-            initialdir=BASE_DIR,
+            initialdir=kBaseDir,
             filetypes=[("Log files in JSON", "*.log.json")])
         logs = sorted(list(logs))
 
@@ -256,7 +257,7 @@ class TransitionProject(object):
         if not os.path.isdir(path_new):
             os.makedirs(path_new)
         state_container.StateContainer(os.path.join(path_new,
-                                                    FN_STATE)).replay(logs)
+                                                    kFilename)).replay(logs)
 
     def _init_gui(self):
         # gui preparation
@@ -266,16 +267,16 @@ class TransitionProject(object):
         # input
         self._widgets['scrollbar_in'] = tkinter.Scrollbar(control)
         self._widgets['text_in'] = tkinter.Text(self._widgets['scrollbar_in'],
-                                                height=HEIGHT_BUTTON,
-                                                width=WIDTH_BUTTON)
+                                                height=kHeightButton,
+                                                width=kWidthButton)
         self._widgets['button_in'] = tkinter.Button(
             self._widgets['scrollbar_in'],
             text='input',
-            height=HEIGHT_BUTTON,
-            width=WIDTH_BUTTON,
+            height=kHeightButton,
+            width=kWidthButton,
             command=self._input)
         self._widgets['show_in'] = tkinter.Text(self._widgets['scrollbar_in'],
-                                                width=WIDTH_BUTTON,
+                                                width=kWidthButton,
                                                 state=tkinter.DISABLED)
         self._widgets['show_in'].bind(
             '<1>',
@@ -302,26 +303,26 @@ class TransitionProject(object):
         self._widgets['button_add_state'] = tkinter.Button(
             self._widgets['frame_add'],
             text='execute',
-            height=HEIGHT_BUTTON,
-            width=WIDTH_BUTTON,
+            height=kHeightButton,
+            width=kWidthButton,
             command=self._cb_add)
         self._widgets['text_add_state'] = tkinter.Text(
             self._widgets['frame_add'],
-            height=HEIGHT_BUTTON,
-            width=WIDTH_BUTTON)
+            height=kHeightButton,
+            width=kWidthButton)
         self._widgets['forced_add'] = tkinter.IntVar()
         self._widgets['check_force_add_state'] = tkinter.Checkbutton(
             self._widgets['frame_add'],
             text='force',
-            height=HEIGHT_BUTTON,
-            width=WIDTH_BUTTON,
+            height=kHeightButton,
+            width=kWidthButton,
             command=lambda i=self._widgets['forced_add']: i.set(
                 int(not i.get())))
         self._widgets['button_split_add_state'] = tkinter.Button(
             self._widgets['frame_add'],
             text='split',
-            height=HEIGHT_BUTTON,
-            width=WIDTH_BUTTON,
+            height=kHeightButton,
+            width=kWidthButton,
             command=self._split_add)
         self._widgets['button_add_state'].pack(side=tkinter.TOP,
                                                fill=tkinter.X)
@@ -335,30 +336,30 @@ class TransitionProject(object):
         self._widgets['button_transit'] = tkinter.Button(
             self._widgets['frame_modify'],
             text='execute',
-            height=HEIGHT_BUTTON,
-            width=WIDTH_BUTTON,
+            height=kHeightButton,
+            width=kWidthButton,
             command=self._cb_transit)
         self._widgets['text_from_transit'] = tkinter.Text(
             self._widgets['frame_modify'],
-            height=HEIGHT_BUTTON,
-            width=WIDTH_BUTTON)
+            height=kHeightButton,
+            width=kWidthButton)
         self._widgets['text_to_transit'] = tkinter.Text(
             self._widgets['frame_modify'],
-            height=HEIGHT_BUTTON,
-            width=WIDTH_BUTTON)
+            height=kHeightButton,
+            width=kWidthButton)
         self._widgets['forced_transit'] = tkinter.IntVar()
         self._widgets['check_force_transit'] = tkinter.Checkbutton(
             self._widgets['frame_modify'],
             text='force',
-            height=HEIGHT_BUTTON,
-            width=WIDTH_BUTTON,
+            height=kHeightButton,
+            width=kWidthButton,
             command=lambda i=self._widgets['forced_transit']: i.set(
                 int(not i.get())))
         self._widgets['button_split_transit'] = tkinter.Button(
             self._widgets['frame_modify'],
             text='split',
-            height=HEIGHT_BUTTON,
-            width=WIDTH_BUTTON,
+            height=kHeightButton,
+            width=kWidthButton,
             command=self._split_transit)
         self._widgets['button_transit'].pack(side=tkinter.TOP, fill=tkinter.X)
         self._widgets['text_from_transit'].pack(side=tkinter.TOP,
@@ -373,22 +374,22 @@ class TransitionProject(object):
         self._widgets['button_remove'] = tkinter.Button(
             self._widgets['frame_delete'],
             text='execute',
-            height=HEIGHT_BUTTON,
-            width=WIDTH_BUTTON,
+            height=kHeightButton,
+            width=kWidthButton,
             command=self._cb_remove)
         self._widgets['forced_remove'] = tkinter.IntVar()
         self._widgets['check_force_remove'] = tkinter.Checkbutton(
             self._widgets['frame_delete'],
             text='force',
-            height=HEIGHT_BUTTON,
-            width=WIDTH_BUTTON,
+            height=kHeightButton,
+            width=kWidthButton,
             command=lambda i=self._widgets['forced_remove']: i.set(
                 int(not i.get())))
         self._widgets['button_split_remove'] = tkinter.Button(
             self._widgets['frame_delete'],
             text='split',
-            height=HEIGHT_BUTTON,
-            width=WIDTH_BUTTON,
+            height=kHeightButton,
+            width=kWidthButton,
             command=self._split_remove)
         self._widgets['button_remove'].pack(side=tkinter.TOP, fill=tkinter.X)
         self._widgets['check_force_remove'].pack(side=tkinter.TOP,
@@ -399,26 +400,26 @@ class TransitionProject(object):
         # others (backup, export)
         tkinter.Button(self._widgets['frame_others'],
                        text='backup',
-                       height=HEIGHT_BUTTON,
-                       width=WIDTH_BUTTON,
+                       height=kHeightButton,
+                       width=kWidthButton,
                        command=self._backup_db).pack(side=tkinter.TOP,
                                                      fill=tkinter.X)
         tkinter.Button(self._widgets['frame_others'],
                        text='export',
-                       height=HEIGHT_BUTTON,
-                       width=WIDTH_BUTTON,
+                       height=kHeightButton,
+                       width=kWidthButton,
                        command=self._export_db).pack(side=tkinter.TOP,
                                                      fill=tkinter.X)
         tkinter.Button(self._widgets['frame_others'],
                        text='filter',
-                       height=HEIGHT_BUTTON,
-                       width=WIDTH_BUTTON,
+                       height=kHeightButton,
+                       width=kWidthButton,
                        command=self._filter).pack(side=tkinter.TOP,
                                                   fill=tkinter.X)
         tkinter.Button(self._widgets['frame_others'],
                        text='replay',
-                       height=HEIGHT_BUTTON,
-                       width=WIDTH_BUTTON,
+                       height=kHeightButton,
+                       width=kWidthButton,
                        command=self._replay).pack(side=tkinter.TOP,
                                                   fill=tkinter.X)
 
@@ -439,9 +440,9 @@ def start_project(name: str):
 
 
 def get_project_list() -> list:
-    if not os.path.isdir(PROJ_DIR):
-        os.mkdir(PROJ_DIR)
-    return tuple(proj for proj in os.listdir(PROJ_DIR)
+    if not os.path.isdir(kProjDir):
+        os.mkdir(kProjDir)
+    return tuple(proj for proj in os.listdir(kProjDir)
                  if os.path.isfile(get_db_path(proj)))
 
 
@@ -449,8 +450,8 @@ def start_new_project(_):
     name = new_project.get('1.0', tkinter.END).strip()
     new_project.delete('1.0', tkinter.END)
     assert bool(name), 'empty name'
-    if not os.path.isdir(os.path.join(PROJ_DIR, name)):
-        os.mkdir(os.path.join(PROJ_DIR, name))
+    if not os.path.isdir(os.path.join(kProjDir, name)):
+        os.mkdir(os.path.join(kProjDir, name))
     if bool(name):
         start_project(name)
 
@@ -458,15 +459,15 @@ def start_new_project(_):
 root = tkinter.Tk()
 root.title('transitions')
 
-new_project = tkinter.Text(root, height=HEIGHT_BUTTON, width=WIDTH_BUTTON)
+new_project = tkinter.Text(root, height=kHeightButton, width=kWidthButton)
 new_project.pack(side=tkinter.TOP)
 new_project.bind('<Return>', start_new_project)
 
 for project in get_project_list()[::-1]:
     tkinter.Button(root,
                    text=project,
-                   height=HEIGHT_BUTTON,
-                   width=WIDTH_BUTTON,
+                   height=kHeightButton,
+                   width=kWidthButton,
                    command=lambda name=project: start_project(name)).pack(
                        side=tkinter.TOP)
 
