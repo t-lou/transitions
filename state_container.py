@@ -3,11 +3,25 @@ import sqlite3
 import json
 import datetime
 
+# The name of the table for states.
 kTable = 'states'
 
 
 class StateContainer(object):
+    '''
+    The container for the state, each state contains two attributes: name and state.
+    Name is the unique identifier, and state shows the stage and state.
+
+    Attributes:
+        path: path for the *.db file for sqlite3. The logs will be beside it.
+    '''
     def __init__(self, path: str):
+        '''
+        Constructor, it initilizes the database when it is not available.
+
+        Attributes:
+            path: path for the *.db file for sqlite3. The logs will be beside it.
+        '''
         self._path = path
         self._dir = os.path.dirname(os.path.realpath(path))
         self._log_dir = os.path.join(self._dir, 'logs')
@@ -19,9 +33,18 @@ class StateContainer(object):
             os.mkdir(self._log_dir)
 
     def __del__(self):
+        '''
+        Destructor, it just closes the connection.
+        '''
         self._conn.close()
 
     def log_action(self, action: dict):
+        '''
+        Log one dictionary with the information to one action.
+
+        Attributes:
+            action: one dict which should contain all information one action brings.
+        '''
         log_text = json.dumps(action, indent=' ')
         path = os.path.join(
             self._log_dir,
@@ -31,10 +54,23 @@ class StateContainer(object):
             fs.write(log_text)
 
     def is_table_available(self) -> bool:
+        '''
+        Checks whether the table for this program is created.
+
+        Now it is "states". I don't see how it can be changed because this software is for ME.
+        '''
         return (kTable, ) in tuple(self._conn.cursor().execute(
             'SELECT name FROM sqlite_master WHERE type="table";'))
 
     def read_state(self, name: str) -> str:
+        '''
+        Get the state for one name.
+
+        Attributes:
+            name: one name.
+        Returns:
+            Its state if the name is given, or None.
+        '''
         cursor = self._conn.cursor()
         result = tuple(
             cursor.execute(
@@ -43,11 +79,28 @@ class StateContainer(object):
         return result[0][0] if len(result) > 0 else None
 
     def consult(self, names: list) -> list:
+        '''
+        Get the states for a name list.
+
+        Attributes:
+            names: one list or array of names.
+        Returns:
+            The states for the names; when a name cannot be found in database, None is returned in its place.
+        '''
         assert all(type(name) == str
                    for name in names), 'wrong parameter in consult'
         return tuple(self.read_state(name) for name in names)
 
     def get_states(self, names: list = None, states: list = None) -> list:
+        '''
+        Get the correspondense of names to states.
+
+        Attributes:
+            names: one list or names for filtering, if it is None, filtering skips and all names are included.
+            states: one list or names for filtering, if it is None, filtering skips and all states are included.
+        Returns:
+            An array of pairs name-state after the given filtering.
+        '''
         if not self.is_table_available():
             return None
         command = f'SELECT name, state FROM {kTable}'
@@ -63,6 +116,14 @@ class StateContainer(object):
         return tuple(self._conn.cursor().execute(command + condition + ';'))
 
     def add_states(self, content: dict, forced: bool = False):
+        '''
+        Add the names with given states.
+        When any key in content is available in database, it breaks.
+
+        Attributes:
+            content: a dict with name as key and state as value.
+            forced: when it is true, the content will be applied without checking.
+        '''
         assert all(
             type(n) == str and type(content[n]) == str
             for n in content), 'wrong parameter in add_states'
@@ -96,6 +157,16 @@ class StateContainer(object):
         self._conn.commit()
 
     def select_for_addition(self, content: dict) -> (list, list):
+        '''
+        Separates the keys of contents to two lists: where add is possible, where it is not.
+        The list impossible will break the function: add_states.
+
+        Attributes:
+            content: a dict with name as key and state as value.
+        Returns:
+            (accepted, denied): accepted are the names which are safe to apply to add_states;
+                denied not accepted, they exist with different states.
+        '''
         assert all(
             type(n) == str and type(content[n]) == str
             for n in content), 'wrong parameter in select_for_addition'
@@ -111,6 +182,16 @@ class StateContainer(object):
                 from_state: str,
                 to_state: str,
                 forced: bool = False):
+        '''
+        Change the states for given names from one state to another.
+        When any of names doesn't have from state, it breaks.
+
+        Attributes:
+            names: an array or list of the states to change.
+            from_state: from which state to change.
+            to_state: to change to which state.
+            forced: when it is true, the states will be changed for the given names if they appear.
+        '''
         assert all(type(name) == str
                    for name in names), 'wrong parameter in transit'
         available_states = self.consult(names)
@@ -138,12 +219,31 @@ class StateContainer(object):
 
     def select_for_transition(self, names: list,
                               from_state: str) -> (list, list):
+        '''
+        Separates names to two lists: where transition is possible, where it is not.
+        The list impossible will break the function: transit.
+
+        Attributes:
+            names: an array or list of the states to change.
+            from_state: from which state to change.
+        Returns:
+            (accepted, denied): accepted are the names which are safe to apply to transit;
+                denied not accepted, they are not in database or have different states than from_state.
+        '''
         selected = tuple(n for n, s in zip(names, self.consult(names))
                          if s == from_state)
         left = tuple(n for n in names if n not in selected)
         return selected, left
 
     def remove(self, names: list, forced: bool = False):
+        '''
+        Remove the states with given names.
+        When any of names is not in database, it breaks.
+
+        Attributes:
+            names: an array or list of the states to remove.
+            forced: when it is true, the states with given names will be deleted anyway.
+        '''
         assert all(type(name) == str
                    for name in names), 'wrong parameter in remove'
         available_states = self.consult(names)
@@ -168,12 +268,29 @@ class StateContainer(object):
         self._conn.commit()
 
     def select_for_removal(self, names: list) -> (list, list):
+        '''
+        Separates names to two lists: where removal is possible, where it is not.
+        The list impossible will break the function: remove.
+
+        Attributes:
+            names: an array or list of the states to delete.
+        Returns:
+            (accepted, denied): accepted are the names which are safe to apply to remove;
+                denied not accepted, they are not in database.
+        '''
         selected = tuple(n for n, s in zip(names, self.consult(names))
                          if s is not None)
         left = tuple(n for n in names if n not in selected)
         return selected, left
 
     def replay(self, logs: list):
+        '''
+        Replay the action with given logs.
+        When any log is not valid in the updated databasem it breaks.
+
+        Attributes:
+            logs: a list or array of logs to replay, it should be one log file generated here.
+        '''
         assert all(os.path.isfile(log) for log in logs), 'logs not available'
         example_actions = {
             'add': {
