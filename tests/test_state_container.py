@@ -4,7 +4,8 @@ import shutil
 import os
 import sqlite3
 
-sys.path.append(os.path.dirname(os.getcwd()))
+DIR_BASE = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+sys.path.append(DIR_BASE)
 
 import state_container
 
@@ -13,6 +14,7 @@ FILE = 'transitions.db'
 
 class TestTransitions(unittest.TestCase):
     def setUp(self):
+        os.chdir(os.path.join(DIR_BASE, 'tests'))
         if os.path.isfile(FILE):
             os.remove(FILE)
 
