@@ -46,16 +46,16 @@ class TransitionProject(object):
                 ','.join(deselected) + '\n')
         self._widgets['show_in'].config(state='disabled')
 
-    def _input(self) -> list:
-        text = self._widgets['text_in'].get('1.0',
-                                            tkinter.END).replace('\n',
-                                                                 '').strip()
+    @classmethod
+    def _get_input_list(cls, widget: tkinter.Text):
+        return tuple(i.strip() for i in widget.get('1.0', tkinter.END).replace(
+            '\n', '').strip().split(',') if bool(i.strip()))
 
-        if not bool(text):
+    def _input(self) -> list:
+        elems = self._get_input_list(self._widgets['text_in'])
+        if not bool(elems):
             self._on_failure('input is empty')
             return
-        elems = tuple(e.strip() for e in text.split(','))
-        elems = tuple(e for e in elems if bool(e))
         done = set()
         ret = list()
         for elem in elems:
@@ -70,13 +70,12 @@ class TransitionProject(object):
         if 'items' not in self._data:
             self._on_failure('input is empty')
             return
-        state = self._widgets['text_add_state'].get('1.0',
-                                                    tkinter.END).replace(
-                                                        '\n', '').strip()
-        if not bool(state):
-            self._on_failure('state is empty')
+
+        states = self._get_input_list(self._widgets['text_add_state'])
+        if len(states) != 1:
+            self._on_failure('one state should be given')
             return
-        content = {n: state for n in self._data['items']}
+        content = {n: states[0] for n in self._data['items']}
         try:
             self._container.add_states(content=content,
                                        forced=bool(
@@ -88,32 +87,28 @@ class TransitionProject(object):
         if 'full' not in self._data:
             self._on_failure('no data available')
             return
-        state = self._widgets['text_add_state'].get('1.0',
-                                                    tkinter.END).replace(
-                                                        '\n', '').strip()
-        if not bool(state):
-            self._on_failure('state is empty')
+        states = self._get_input_list(self._widgets['text_add_state'])
+        if len(states) != 1:
+            self._on_failure('one state should be given')
             return
         self._data['items'], left = self._container.select_for_addition(
-            content={name: state
+            content={name: states[0]
                      for name in self._data['full']})
         self._show_items(self._data['items'], left)
 
     def _cb_transit(self):
-        from_transit = self._widgets['text_from_transit'].get(
-            '1.0', tkinter.END).replace('\n', '').strip()
-        to_transit = self._widgets['text_to_transit'].get(
-            '1.0', tkinter.END).replace('\n', '').strip()
         if 'items' not in self._data:
             self._on_failure('input is empty')
             return
-        if not bool(from_transit) or not bool(to_transit):
-            self._on_failure('states not complete')
+        from_transit = self._get_input_list(self._widgets['text_from_transit'])
+        to_transit = self._get_input_list(self._widgets['text_to_transit'])
+        if len(from_transit) != 1 or len(to_transit) != 1:
+            self._on_failure('one state should be given for from and to')
             return
         try:
             self._container.transit(names=self._data['items'],
-                                    from_state=from_transit,
-                                    to_state=to_transit,
+                                    from_state=from_transit[0],
+                                    to_state=to_transit[0],
                                     forced=bool(
                                         self._widgets['forced_transit'].get()))
         except Exception as ex:
@@ -123,13 +118,12 @@ class TransitionProject(object):
         if 'full' not in self._data:
             self._on_failure('no data available')
             return
-        from_transit = self._widgets['text_from_transit'].get(
-            '1.0', tkinter.END).replace('\n', '').strip()
-        if not bool(from_transit):
-            self._on_failure('state is empty')
+        from_transit = self._get_input_list(self._widgets['text_from_transit'])
+        if len(from_transit) != 1:
+            self._on_failure('one state should be given for from')
             return
         self._data['items'], left = self._container.select_for_transition(
-            names=self._data['full'], from_state=from_transit)
+            names=self._data['full'], from_state=from_transit[0])
         self._show_items(self._data['items'], left)
 
     def _cb_remove(self):
@@ -207,14 +201,10 @@ class TransitionProject(object):
         text_filter_states.pack(side=tkinter.TOP, fill=tkinter.X)
 
         def filter():
-            text_names = text_filter_names.get('1.0', tkinter.END).replace(
-                '\n', '').strip()
-            text_states = text_filter_states.get('1.0', tkinter.END).replace(
-                '\n', '').strip()
-            names = tuple(n.strip() for n in text_names.split(',')
-                          if bool(n.strip())) if bool(text_names) else None
-            states = tuple(n.strip() for n in text_states.split(',')
-                           if bool(n.strip())) if bool(text_states) else None
+            names = self._get_input_list(text_filter_names)
+            states = self._get_input_list(text_filter_states)
+            names = names if bool(names) else None
+            states = states if bool(states) else None
             filtered['filtered'] = self._container.get_states(names=names,
                                                               states=states)
             text_display_names.delete('1.0', tkinter.END)
