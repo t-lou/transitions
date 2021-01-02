@@ -10,19 +10,41 @@ import datetime
 
 import state_container
 
+# Base directory for the program.
 kBaseDir = os.path.dirname(os.path.realpath(__file__))
+# Directory for the projects.
 kProjDir = os.path.join(kBaseDir, 'projects')
+# Database filename in projects.
 kFilename = 'states.db'
+# Height of buttons and other components.
 kHeightButton = 5
+# Width of buttons and other components.
 kWidthButton = 60
 
 
 def get_db_path(name: str) -> str:
+    '''
+    Get the database file for one project.
+
+    Attributes:
+        name: project name.
+    Returns:
+        Absolute name for the database file for this project.
+    '''
     return os.path.join(kProjDir, name, kFilename)
 
 
 class TransitionProject(object):
+    '''
+    GUI for transitions.
+    '''
     def __init__(self, name: str):
+        '''
+        Constructor.
+
+        Attributes:
+            name: project name.
+        '''
         self._name = name
         self._path_db = get_db_path(name)
         self._data = dict()
@@ -31,11 +53,24 @@ class TransitionProject(object):
         self._init_gui()
 
     def _on_failure(self, cause: str = None):
+        '''
+        Show an error message.
+
+        Attributes:
+            cause: reason of failure.
+        '''
         tkinter.messagebox.showerror(
             '',
             cause if cause is not None else 'cannot execute this operation')
 
     def _show_items(self, selected: list, deselected: list = None):
+        '''
+        Show the input items or the splitted items for one operation (acceptable and conflicting).
+
+        Attributes:
+            selected: acceptable items for one operation.
+            deselected: conflicting items for one operation.
+        '''
         self._widgets['show_in'].config(state='normal')
         self._widgets['show_in'].delete('1.0', tkinter.END)
         self._widgets['show_in'].insert(
@@ -43,31 +78,41 @@ class TransitionProject(object):
             ','.join(self._data['items']) + '\n')
         if deselected is not None:
             self._widgets['show_in'].insert(
-                tkinter.END, f'{len(deselected)} items deselected\n' +
-                ','.join(deselected) + '\n')
+                tkinter.END,
+                f'{len(deselected)} items deselected (copy and input again)\n'
+                + ','.join(deselected) + '\n')
         self._widgets['show_in'].config(state='disabled')
 
     @classmethod
-    def _get_input_list(cls, widget: tkinter.Text):
+    def _get_input_list(cls, widget: tkinter.Text) -> tuple:
+        '''
+        Get a list of input objects (item-names or states) separated with ','.
+
+        Attributes:
+            widget: input text widget.
+        Returns:
+            An array of objects from input widget.
+        '''
         return tuple(i.strip() for i in widget.get('1.0', tkinter.END).replace(
             '\n', '').strip().split(',') if bool(i.strip()))
 
-    def _input(self) -> list:
+    def _input(self):
+        '''
+        Get the list of input item-names, save to internal data and show results.
+        '''
         elems = self._get_input_list(self._widgets['text_in'])
         if not bool(elems):
             self._on_failure('input is empty')
             return
-        done = set()
-        ret = list()
-        for elem in elems:
-            if elem not in done:
-                done.add(elem)
-                ret.append(elem)
-        self._data['items'] = tuple(ret)
-        self._data['full'] = tuple(ret)
+        elems = tuple(sorted(set(elems), key=elems.index))
+        self._data['items'] = elems[:]
+        self._data['full'] = elems[:]
         self._show_items(self._data['items'])
 
     def _cb_add(self):
+        '''
+        Callback function for addition.
+        '''
         if 'items' not in self._data:
             self._on_failure('input is empty')
             return
@@ -85,6 +130,10 @@ class TransitionProject(object):
             self._on_failure(str(ex))
 
     def _split_add(self):
+        '''
+        Callback function for splitting input items to accepted and conflicting.
+        Accepted items are available for operation. Conflicting items are shown for copying and reinput.
+        '''
         if 'full' not in self._data:
             self._on_failure('no data available')
             return
@@ -98,6 +147,9 @@ class TransitionProject(object):
         self._show_items(self._data['items'], left)
 
     def _cb_transit(self):
+        '''
+        Callback function for transition.
+        '''
         if 'items' not in self._data:
             self._on_failure('input is empty')
             return
@@ -116,6 +168,10 @@ class TransitionProject(object):
             self._on_failure(str(ex))
 
     def _split_transit(self):
+        '''
+        Callback function for splitting input items to accepted and conflicting.
+        Accepted items are available for operation. Conflicting items are shown for copying and reinput.
+        '''
         if 'full' not in self._data:
             self._on_failure('no data available')
             return
@@ -128,6 +184,9 @@ class TransitionProject(object):
         self._show_items(self._data['items'], left)
 
     def _cb_remove(self):
+        '''
+        Callback function for removal.
+        '''
         if 'items' not in self._data:
             self._on_failure('input is empty')
             return
@@ -139,6 +198,10 @@ class TransitionProject(object):
             self._on_failure(str(ex))
 
     def _split_remove(self):
+        '''
+        Callback function for splitting input items to accepted and conflicting.
+        Accepted items are available for operation. Conflicting items are shown for copying and reinput.
+        '''
         if 'full' not in self._data:
             self._on_failure('no data available')
             return
@@ -148,6 +211,10 @@ class TransitionProject(object):
         self._show_items(self._data['items'], left)
 
     def _backup_db(self):
+        '''
+        Callback function for backup database (db file only).
+        A dialog for file selection is opened, type in the name and save.
+        '''
         filename = tkinter.filedialog.asksaveasfilename(
             initialdir=os.path.dirname(self._path_db),
             initialfile=kFilename + '.backup')
@@ -155,6 +222,13 @@ class TransitionProject(object):
         shutil.copyfile(self._path_db, filename)
 
     def _export_db(self, states: list = None):
+        '''
+        Callback function for exporting the database for human and machine readable files.
+        One JSON and one CSV files will be generated with given path and filename, and corresponding extension.
+
+        Attributes:
+            states: if it is given, the given states will be exported; otherwise the states in database will.
+        '''
         default_name = str(datetime.datetime.now()).replace(' ', 'T').replace(
             ':', '-')
         filename = tkinter.filedialog.asksaveasfilename(
@@ -190,6 +264,10 @@ class TransitionProject(object):
                 writer.writerow({'name': name, 'state': state})
 
     def _filter(self):
+        '''
+        Callback function for filtering and displayment.
+        It can be used for viewing the states, filtering the states and exporting.
+        '''
         win_filter = tkinter.Tk()
         win_filter.title(self._name)
 
@@ -226,8 +304,8 @@ class TransitionProject(object):
                 text_display_states.insert(tkinter.END, '\n'.join(states))
                 text_summary.insert(
                     tkinter.END,
-                    f'there are {len(set(names))} items with {len(set(states))} states'
-                )
+                    f'there are {len(set(names))} items with {len(set(states))} states:\n'
+                    + ','.join(sorted(set(states), key=states.index)))
             else:
                 text_summary.insert(tkinter.END, f'there is no result')
             text_display_names.config(state='disabled')
@@ -272,6 +350,9 @@ class TransitionProject(object):
         frame_out.pack(side=tkinter.RIGHT, fill=tkinter.Y)
 
     def _replay(self):
+        '''
+        Callback function for replaying, it will generate another project with selected log files.
+        '''
         logs = tkinter.filedialog.askopenfilenames(
             title='select the log files for operations to replay',
             initialdir=kBaseDir,
@@ -286,6 +367,9 @@ class TransitionProject(object):
                                                     kFilename)).replay(logs)
 
     def _init_gui(self):
+        '''
+        Initialize the main panel for one project.
+        '''
         # gui preparation
         control = tkinter.Tk()
         control.title(self._name)
@@ -462,10 +546,22 @@ class TransitionProject(object):
 
 
 def start_project(name: str):
+    '''
+    Start one existing project.
+
+    Attributes:
+        name: project name.
+    '''
     TransitionProject(name)
 
 
-def get_project_list() -> list:
+def get_project_list() -> tuple:
+    '''
+    Get all created projects.
+
+    Returns:
+        The name of projects.
+    '''
     if not os.path.isdir(kProjDir):
         os.mkdir(kProjDir)
     return tuple(proj for proj in os.listdir(kProjDir)
@@ -473,6 +569,9 @@ def get_project_list() -> list:
 
 
 def start_new_project(_):
+    '''
+    Creat a new project.
+    '''
     name = new_project.get('1.0', tkinter.END).strip()
     new_project.delete('1.0', tkinter.END)
     assert bool(name), 'empty name'
