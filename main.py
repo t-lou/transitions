@@ -160,11 +160,22 @@ class TransitionProject(object):
         if states is None:
             states = self._container.get_states()
         if filename.endswith('.json'):
-            text = json.dumps(tuple({
-                'name': name,
-                'state': state
-            } for name, state in states),
-                              indent=' ')
+            state_set = set(state for _, state in states)
+            text = json.dumps(
+                {
+                    'states':
+                    tuple({
+                        'name': name,
+                        'state': state
+                    } for name, state in states),
+                    'count_names':
+                    len(states),
+                    'count_states':
+                    len(state_set),
+                    'states_in_project':
+                    tuple(state_set)
+                },
+                indent=' ')
             with open(filename, 'w') as fs:
                 fs.write(text)
         # elif filename.endswith('.yaml'):
