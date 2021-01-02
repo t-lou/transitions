@@ -212,6 +212,9 @@ class TransitionProject(object):
         text_filter_states.pack(side=tkinter.TOP, fill=tkinter.X)
 
         def filter():
+            text_display_names.config(state='normal')
+            text_display_states.config(state='normal')
+            text_summary.config(state='normal')
             names = self._get_input_list(text_filter_names)
             states = self._get_input_list(text_filter_states)
             names = names if bool(names) else None
@@ -220,10 +223,20 @@ class TransitionProject(object):
                                                               states=states)
             text_display_names.delete('1.0', tkinter.END)
             text_display_states.delete('1.0', tkinter.END)
+            text_summary.delete('1.0', tkinter.END)
             if bool(filtered['filtered']):
                 names, states = zip(*filtered['filtered'])
                 text_display_names.insert(tkinter.END, '\n'.join(names))
                 text_display_states.insert(tkinter.END, '\n'.join(states))
+                text_summary.insert(
+                    tkinter.END,
+                    f'there are {len(set(names))} items with {len(set(states))} states'
+                )
+            else:
+                text_summary.insert(tkinter.END, f'there is no result')
+            text_display_names.config(state='disabled')
+            text_display_states.config(state='disabled')
+            text_summary.config(state='disabled')
 
         def export():
             self._export_db(states=filtered['filtered'])
@@ -238,10 +251,26 @@ class TransitionProject(object):
                        height=kHeightButton,
                        width=kWidthButton,
                        command=export).pack(side=tkinter.TOP, fill=tkinter.X)
-        text_display_names = tkinter.Text(frame_out, width=kWidthButton)
-        text_display_states = tkinter.Text(frame_out, width=kWidthButton)
+        text_display_names = tkinter.Text(frame_out,
+                                          width=kWidthButton,
+                                          state=tkinter.DISABLED)
+        text_display_states = tkinter.Text(frame_out,
+                                           width=kWidthButton,
+                                           state=tkinter.DISABLED)
+        text_summary = tkinter.Text(frame_in,
+                                    height=kHeightButton,
+                                    width=kWidthButton,
+                                    state=tkinter.DISABLED)
         text_display_names.pack(side=tkinter.LEFT, fill=tkinter.Y)
         text_display_states.pack(side=tkinter.LEFT, fill=tkinter.Y)
+        text_summary.pack(side=tkinter.TOP, fill=tkinter.X)
+
+        # to allow copy
+        text_display_names.bind('<1>',
+                                lambda event: text_display_names.focus_set())
+        text_display_states.bind('<1>',
+                                 lambda event: text_display_states.focus_set())
+        text_summary.bind('<1>', lambda event: text_summary.focus_set())
 
         frame_in.pack(side=tkinter.LEFT, fill=tkinter.Y)
         frame_out.pack(side=tkinter.RIGHT, fill=tkinter.Y)
