@@ -118,12 +118,14 @@ class StateContainer(object):
     def add_states(self, content: dict, forced: bool = False):
         '''
         Add the names with given states.
-        When any key in content is available in database, it breaks.
+        When any key in content is available in database, it breaks without changing.
 
         Attributes:
             content: a dict with name as key and state as value.
             forced: when it is true, the content will be applied without checking.
         '''
+        if not bool(content):
+            return
         assert all(
             type(n) == str and type(content[n]) == str
             for n in content), 'wrong parameter in add_states'
@@ -184,7 +186,7 @@ class StateContainer(object):
                 forced: bool = False):
         '''
         Change the states for given names from one state to another.
-        When any of names doesn't have from state, it breaks.
+        When any of names doesn't have from state, it breaks without changing.
 
         Attributes:
             names: an array or list of the states to change.
@@ -192,6 +194,8 @@ class StateContainer(object):
             to_state: to change to which state.
             forced: when it is true, the states will be changed for the given names if they appear.
         '''
+        if not bool(names):
+            return
         assert all(type(name) == str
                    for name in names), 'wrong parameter in transit'
         available_states = self.consult(names)
@@ -238,12 +242,14 @@ class StateContainer(object):
     def remove(self, names: list, forced: bool = False):
         '''
         Remove the states with given names.
-        When any of names is not in database, it breaks.
+        When any of names is not in database, it breaks without changing.
 
         Attributes:
             names: an array or list of the states to remove.
             forced: when it is true, the states with given names will be deleted anyway.
         '''
+        if not bool(names):
+            return
         assert all(type(name) == str
                    for name in names), 'wrong parameter in remove'
         available_states = self.consult(names)

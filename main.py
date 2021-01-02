@@ -6,6 +6,7 @@ import os
 import shutil
 import json
 import csv
+import datetime
 
 import state_container
 
@@ -154,44 +155,39 @@ class TransitionProject(object):
         shutil.copyfile(self._path_db, filename)
 
     def _export_db(self, states: list = None):
+        default_name = str(datetime.datetime.now()).replace(' ', 'T').replace(
+            ':', '-')
         filename = tkinter.filedialog.asksaveasfilename(
-            initialdir=os.path.dirname(self._path_db))
+            initialdir=os.path.dirname(self._path_db),
+            initialfile=default_name)
         assert bool(filename), 'file not selected'
         if states is None:
             states = self._container.get_states()
-        if filename.endswith('.json'):
-            state_set = set(state for _, state in states)
-            text = json.dumps(
-                {
-                    'states':
-                    tuple({
-                        'name': name,
-                        'state': state
-                    } for name, state in states),
-                    'count_names':
-                    len(states),
-                    'count_states':
-                    len(state_set),
-                    'states_in_project':
-                    tuple(state_set)
-                },
-                indent=' ')
-            with open(filename, 'w') as fs:
-                fs.write(text)
-        # elif filename.endswith('.yaml'):
-        #     text = yaml.dump(
-        #         tuple({
-        #             'name': name,
-        #             'state': state
-        #         } for name, state in states))
-        #     with open(filename, 'w') as fs:
-        #         fs.write(text)
-        else:
-            with open(filename, 'w', newline='') as fs:
-                writer = csv.DictWriter(fs, fieldnames=['name', 'state'])
-                writer.writeheader()
-                for name, state in states:
-                    writer.writerow({'name': name, 'state': state})
+        # json file with summary
+        state_set = set(state for _, state in states)
+        text = json.dumps(
+            {
+                'states':
+                tuple({
+                    'name': name,
+                    'state': state
+                } for name, state in states),
+                'count_names':
+                len(states),
+                'count_states':
+                len(state_set),
+                'states_in_project':
+                tuple(state_set)
+            },
+            indent=' ')
+        with open(filename + '.json', 'w') as fs:
+            fs.write(text)
+        # csv for Excel or Calc
+        with open(filename + '.csv', 'w', newline='') as fs:
+            writer = csv.DictWriter(fs, fieldnames=['name', 'state'])
+            writer.writeheader()
+            for name, state in states:
+                writer.writerow({'name': name, 'state': state})
 
     def _filter(self):
         win_filter = tkinter.Tk()

@@ -74,7 +74,9 @@ Other options like
 
 1. backup: make a backup datebase for the project, logs are not part of backup
 
-2. export: export the states in JSON (with .json extension) or CSV (when the extension is not .json)
+2. export: export the states in one JSON file with summary and one CSV file for Office suite
+
+![image](https://github.com/t-lou/transitions/blob/master/screenshots/export.png)
 
 3. filter: see below
 
