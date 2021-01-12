@@ -129,14 +129,27 @@ class StateContainer(object):
         assert all(
             type(n) == str and type(content[n]) == str
             for n in content), 'wrong parameter in add_states'
+
+        action = {
+            'action': 'add',
+            'content': content,
+            'forced': forced,
+        }
+
         names = tuple(content.keys())
         target_states = tuple(content[n] for n in names)
         available_states = self.consult(names)
         conflicts = tuple(e is not None and e != s
                           for s, e in zip(target_states, available_states))
-        assert forced or not any(
-            conflicts
-        ), f'{tuple(n for n, c in zip(names, conflicts) if c)} already added with another states'
+
+        action['doable'] = forced or not any(conflicts)
+        if forced:
+            action['reset'] = tuple(n for n, c in zip(names, conflicts) if c)
+
+        self.log_action(action)
+
+        assert action['doable'], \
+            f'{tuple(n for n, c in zip(names, conflicts) if c)} already added with another states'
         cursor = self._conn.cursor()
         for n, s, e in zip(names, target_states, available_states):
             if e is None:
@@ -146,15 +159,6 @@ class StateContainer(object):
             elif forced:
                 cursor.execute(
                     f'UPDATE {kTable} SET state="{s}" WHERE name="{n}";')
-
-        action = {
-            'action': 'add',
-            'content': content,
-            'forced': forced,
-        }
-        if forced:
-            action['reset'] = tuple(n for n, c in zip(names, conflicts) if c)
-        self.log_action(action)
 
         self._conn.commit()
 
@@ -200,13 +204,10 @@ class StateContainer(object):
                    for name in names), 'wrong parameter in transit'
         available_states = self.consult(names)
         assert None not in available_states, \
-            f'{tuple(name for name, s in zip(names, available_states) if s is None)} not initialized'
-        assert forced or all(s == from_state for s in available_states), \
-            f'{tuple(n for n, s in zip(names, available_states) if s != from_state)} doesn\'t have state {from_state}'
-        cursor = self._conn.cursor()
-        for name, available_state in zip(names, available_states):
-            cursor.execute(
-                f'UPDATE {kTable} SET state="{to_state}" WHERE name="{name}";')
+            f'{tuple(n for n, s in zip(names, available_states) if s is None)} not initialized'
+
+        conflicts = tuple(name for name, s in zip(names, available_states)
+                          if s != from_state)
 
         action = {
             'action': 'transit',
@@ -215,9 +216,17 @@ class StateContainer(object):
             'to_state': to_state,
             'forced': forced,
         }
+        action['doable'] = forced or not bool(conflicts)
         if forced:
             action['original_states'] = available_states
         self.log_action(action)
+
+        assert action[
+            'doable'], f'{conflicts} doesn\'t have state {from_state}'
+        cursor = self._conn.cursor()
+        for name, available_state in zip(names, available_states):
+            cursor.execute(
+                f'UPDATE {kTable} SET state="{to_state}" WHERE name="{name}";')
 
         self._conn.commit()
 
@@ -252,24 +261,26 @@ class StateContainer(object):
             return
         assert all(type(name) == str
                    for name in names), 'wrong parameter in remove'
+
         available_states = self.consult(names)
-        assert forced or None not in available_states, \
-            f'{tuple(n for n, s in zip(names, available_states) if s is None)} are not available in remove'
-        cursor = self._conn.cursor()
-        for name, state in zip(names, available_states):
-            if state is not None:
-                cursor.execute(f'DELETE FROM {kTable} WHERE name="{name}";')
+        conflicts = tuple(n for n, s in zip(names, available_states)
+                          if s is None)
 
         action = {
             'action': 'remove',
             'names': names,
             'forced': forced,
         }
+        action['doable'] = forced or not bool(conflicts)
         if forced:
-            action['skipped'] = tuple(n
-                                      for n, s in zip(names, available_states)
-                                      if s is None)
+            action['skipped'] = conflicts
         self.log_action(action)
+
+        assert action['doable'], f'{conflicts} are not available in remove'
+        cursor = self._conn.cursor()
+        for name, state in zip(names, available_states):
+            if state is not None:
+                cursor.execute(f'DELETE FROM {kTable} WHERE name="{name}";')
 
         self._conn.commit()
 
@@ -322,13 +333,19 @@ class StateContainer(object):
             'transit': self.transit,
             'remove': self.remove,
         }
-        for log in logs:
-            with open(log) as fs:
-                action = json.loads(fs.read())
-            assert 'action' in action and action['action'] in example_actions and \
+
+        # no auto close sucks
+        def read(fn: str) -> str:
+            with open(fn, 'r') as fs:
+                return fs.read()
+
+        actions = tuple(json.loads(read(log)) for log in logs)
+        assert all('action' in action and action['action'] in example_actions and \
                 all(p in action and type(action[p]) == type(example_actions[action['action']][p]) \
-                    for p in example_actions[action['action']]), \
-                f'invalid action {action} in {log}'
+                    for p in example_actions[action['action']]) for action in actions), \
+            'at least one of the actions is invalid and has incomplete data'
+        for action in filter(lambda a: not ('doable' in a and not a['doable']),
+                             actions):
             callbacks[action['action']](**{
                 p: action[p]
                 for p in example_actions[action['action']] if p != 'action'
