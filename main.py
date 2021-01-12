@@ -238,7 +238,7 @@ class TransitionProject(object):
         if states is None:
             states = self._container.get_states()
         # json file with summary
-        state_set = set(state for _, state in states)
+        state_list = tuple(state for _, state in states)
         text = json.dumps(
             {
                 'states':
@@ -249,9 +249,10 @@ class TransitionProject(object):
                 'count_names':
                 len(states),
                 'count_states':
-                len(state_set),
+                len(set(state_list)),
                 'states_in_project':
-                tuple(state_set)
+                {s: state_list.count(s)
+                 for s in set(state_list)}
             },
             indent=' ')
         with open(filename + '.json', 'w') as fs:
