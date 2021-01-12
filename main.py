@@ -94,7 +94,7 @@ class TransitionProject(object):
             An array of objects from input widget.
         '''
         return tuple(i.strip() for i in widget.get('1.0', tkinter.END).replace(
-            '\n', '').strip().split(',') if bool(i.strip()))
+            '\n', ',').strip().split(',') if bool(i.strip()))
 
     def _input(self):
         '''
